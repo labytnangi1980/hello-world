@@ -1,6 +1,6 @@
 #!/usr/bin/env python 
 
-"""Utility for changing MAC address on Mac OS X.
+"""Utility generate random MAC address and set it on Mac OS X.
 Run this only as superuser (you can use 'sudo').
 The utility automaticaly select the first Wi-Fi interface.
 Or you can specify inteface name in the command line:
