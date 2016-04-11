@@ -1,5 +1,12 @@
 #!/usr/bin/env python 
 
+"""Utility for changing MAC address on Mac OS X.
+Run this only as superuser (you can use 'sudo').
+The utility automaticaly select the first Wi-Fi interface.
+Or you can specify inteface name in the command line:
+> sudo change_wifi_mac_addr en1
+"""
+
 import random
 import subprocess
 import sys, os
@@ -50,7 +57,7 @@ def disconnect_from_wifi():
     status = subprocess.call(AIRPORT_BINARY + ' -z', shell=True)
     return status
 
-def change_wifi_mac(interface, new_addr):
+def change_mac_addr(interface, new_addr):
     cmd = '/sbin/ifconfig ' + interface + ' ether ' + new_addr
     status = subprocess.call(cmd, shell=True)
     return status
@@ -67,11 +74,14 @@ def main():
         print "Cannot disconnect from wi-fi network"
 	sys.exit(1)
 
-    wifi_adapter = get_wifi_adapter_name()
+    if (len(sys.argv) > 1):
+        interface_name = sys.argv[1]
+    else:
+        interface_name = get_wifi_adapter_name()
     new_mac = generate_new_mac()
-    print "Change MAC address on %s" % wifi_adapter
-    if change_wifi_mac(wifi_adapter, new_mac):
-        print "Cannon change MAC address"
+    print "Change MAC address on %s" % interface_name
+    if change_mac_addr(interface_name, new_mac):
+        print "Cannot change MAC address on %s" % interface_name
 	sys.exit(1)
 
     print 'Success! New MAC address is %s' % new_mac
