@@ -1,0 +1,83 @@
+#!/usr/bin/env python 
+
+import random
+import subprocess
+import sys, os
+
+AIRPORT_BINARY = '/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
+NETWORKSETUP_BINARY='/usr/sbin/networksetup'
+
+def get_current_network_name():
+    result = ""
+    try:
+        output = subprocess.check_output(AIRPORT_BINARY + ' -I', shell=True)[:-1]
+    except subprocess.CalledProcessError as err:
+        print str(err)
+	sys.exit(1)
+    # find the line with "SSID: network_name" string
+    for x in output.split('\n'):
+        if x.find('SSID:') > -1:
+            result = x.split(':')[1].strip()
+    return result
+
+def get_wifi_adapter_name():
+    result = ""
+    try:
+        output = subprocess.check_output(NETWORKSETUP_BINARY+ ' -listallhardwareports', shell=True)[:-2]
+    except subprocess.CalledProcessError as err:
+        print str(err)
+	sys.exit(1)
+    # find the line with first wi-fi device name
+    for x in output.split('\n\n'):
+        if x.find('Hardware Port: Wi-Fi') > -1:
+	    result = x.strip('\n').split('\n')[1].split(':')[1].strip()
+    return result
+
+def generate_new_mac():
+    result = ""
+    # generate random MAC address and clear multicast bit
+    new_addr = "%012x" % (random.randint(1, 2**48-1) & (~(2**40)))
+    # add ':' byte separator
+    for x in range(len(new_addr) - 2):
+        if x % 2:
+            result = result + new_addr[x] + ":"
+        else:
+            result = result + new_addr[x]
+    result += new_addr[-2:]
+    return result
+
+def disconnect_from_wifi():
+    status = subprocess.call(AIRPORT_BINARY + ' -z', shell=True)
+    return status
+
+def change_wifi_mac(interface, new_addr):
+    cmd = '/sbin/ifconfig ' + interface + ' ether ' + new_addr
+    status = subprocess.call(cmd, shell=True)
+    return status
+
+def main():
+    # check user id for the current process
+    if os.geteuid():
+        print "You need superuser privileges"
+	sys.exit(1)
+
+    current_network = get_current_network_name()
+
+    if disconnect_from_wifi():
+        print "Cannot disconnect from wi-fi network"
+	sys.exit(1)
+
+    wifi_adapter = get_wifi_adapter_name()
+    new_mac = generate_new_mac()
+    print "Change MAC address on %s" % wifi_adapter
+    if change_wifi_mac(wifi_adapter, new_mac):
+        print "Cannon change MAC address"
+	sys.exit(1)
+
+    print 'Success! New MAC address is %s' % new_mac
+    print 'Don\'t forget to connect to your network!'
+    if current_network: 
+        print 'Hint: last network name is "' + current_network + '"'
+
+if __name__ == '__main__':
+    main()
